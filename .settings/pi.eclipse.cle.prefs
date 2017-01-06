@@ -1,0 +1,11 @@
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-compact-red=false
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-debug=true
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-expected-conflicts=8
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-no-positions=false
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-no-scanner=false
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-non-terms=false
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-output=src
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-parser-class=SintacticAnalyzer
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-symbols-class=Symbols
+//src/naturaltosql/sources/SintacticAnalyzer.cup/cup-symbols-if=true
+eclipse.preferences.version=1

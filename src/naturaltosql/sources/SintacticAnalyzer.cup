@@ -1,0 +1,195 @@
+package naturaltosql.compiler;
+
+import java_cup.runtime.*;
+
+parser code {::}
+
+// Definición de Simbolos Terminales
+// Tokens que crean una coincidencia literal o contra una lista de valores reales
+terminal TK_CREAR_TABLA, // CREAR:
+		 TK_ATRIBUTOS, // ATTRIBUTOS:
+ 		 TK_LISTAR, // LISTAR
+ 		 TK_INSERTAR, // INSERTAR
+ 		 TK_BORRAR, // BORRAR
+ 		 TK_ACTUALIZAR, // ACTUALIZAR
+ 		 TK_DONDE, // DONDE
+ 		 TK_FIN_SENTENCIA; // PUNTO Y COMA ( FINAL DE UNA SENTENCIA )
+
+// Estados terminales para los nombres de las columnas ( resuelven a un nombre de columna )
+terminal TK_NOMBRE, TK_CARNET, TK_PROMEDIO, TK_TELEFONO, TK_CARRERA, TK_COMA, TK_TODOS;
+
+// Estados terminales para los nombres de tabla válidos
+terminal TK_TABLA_ESTUDIANTE;
+
+// Estados terminales para la definición de los tipos de datos ( resuelven a una cadena descriptiva )
+terminal TK_ENTERO_DEFINICION, TK_REAL_DEFINICION, TK_CADENA_DEFINICION;
+
+// Estados terminales para los tipos de datos ( resuelven a un valor específico )
+terminal TK_CADENA, TK_ENTERO, TK_REAL;
+
+// estados terminales para simbolos de comparación ( resuelven al simbolo adecuado para comparar )
+terminal TK_MAYOR, TK_MENOR, TK_MAYOR_IGUAL, TK_MENOR_IGUAL, TK_IGUAL, TK_DIFERENTE, TK_O, TK_Y;
+
+
+// Simbolos no terminales
+// Representan estados intermedios en los que no se resuelve a un valor directamente
+// sino se puede transicionar indefinidamente a otro estado que a su vez puede generar más subestados o resolver a un token terminal
+non terminal ROOT;
+non terminal String LISTAR, INSERTAR, ACTUALIZAR, ELIMINAR, CREAR_TABLA;
+					
+non terminal String DONDE, COLUMNAS, OPERADOR;	
+					
+non terminal String DETALLE_COLUMNAS, COLUMNA, NOMBRE_TABLA, DEFINICION_CAMPO, TIPO_DATO_CAMPO;
+non terminal String VALOR_CON_COMA, CAMPO_CON_VALOR, VALOR_CAMPO, ERROR;
+
+// Configuración de precedencia de operadores
+precedence left TK_Y, TK_O;
+
+// Definición de la Gramática formal para poder generar
+// sentencias SQL válidas
+
+// Estado inicial de la gramática
+ROOT ::=    LISTAR:token TK_FIN_SENTENCIA
+				{: RESULT = token + ";"; :} |
+				
+            INSERTAR:token TK_FIN_SENTENCIA
+            	{: RESULT = token + ";"; :} |
+            	
+            ACTUALIZAR:token TK_FIN_SENTENCIA
+            	{: RESULT = token + ";"; :} |
+            	
+            ELIMINAR:token TK_FIN_SENTENCIA
+            	{: RESULT = token + ";"; :} |
+            	
+            CREAR_TABLA:token TK_FIN_SENTENCIA
+            	{: RESULT = token + ";"; :} |
+            	
+            ERROR
+            	{: RESULT = "Error en la sentencia SQL ingresada."; :}
+;
+
+
+// En el caso de una sentencia sentencia SELECT
+LISTAR ::=  TK_LISTAR NOMBRE_TABLA:token COLUMNAS:token2 
+				{: RESULT = "SELECT " + token2 + " FROM " + token; :} |
+				
+            TK_LISTAR NOMBRE_TABLA:token COLUMNAS:token2  TK_DONDE DONDE:token3
+            	{: RESULT = "SELECT " + token2 + " FROM " + token + " WHERE " + token3; :}
+;
+
+// En el caso de una sentencia INSERT
+INSERTAR ::= TK_INSERTAR NOMBRE_TABLA:token VALOR_CON_COMA:token2
+				{: RESULT = "INSERT INTO " + token + " VALUES(" + token2 + ")"; :}
+
+;
+
+// en el caso de una sentencia DELETE
+ELIMINAR ::= TK_BORRAR NOMBRE_TABLA:token
+			 	{: RESULT = "DELETE FROM " +  token; :} |
+			 	
+			 TK_BORRAR NOMBRE_TABLA:token TK_DONDE DONDE:token2
+				{: RESULT = "DELETE FROM " + token + " WHERE " + token2; :}
+
+;
+
+// en el caso de una sentencia UPDATE
+ACTUALIZAR ::=  TK_ACTUALIZAR NOMBRE_TABLA:token CAMPO_CON_VALOR:token2
+					{: RESULT = "UPDATE " + token + " SET " + token2; :} |
+					
+				TK_ACTUALIZAR NOMBRE_TABLA:token CAMPO_CON_VALOR:token2 TK_DONDE DONDE:token3
+					{: RESULT = "UPDATE " + token + " SET " + token2 + " WHERE " + token3; :}
+
+;
+
+// en el caso de una sentencia CREATE TABLE
+CREAR_TABLA ::= TK_CREAR_TABLA NOMBRE_TABLA:token TK_ATRIBUTOS DEFINICION_CAMPO:token2
+					{: RESULT = "CREATE TABLE " + token + " (" + token2 + ")"; :}
+
+;
+
+// definicion de las columnas para una sentencia SELECT
+COLUMNAS ::= DETALLE_COLUMNAS:token
+				{: RESULT = token; :} |
+					
+			TK_TODOS
+			 	{: RESULT = "*"; :} |
+				{: RESULT = "*"; :}
+;
+
+DETALLE_COLUMNAS ::= DETALLE_COLUMNAS:token COLUMNA:token2
+						{: RESULT = token + ", " + token2; :} |
+					COLUMNA:token
+						{: RESULT = token; :}		
+;
+
+// definición de la sección del WHERE
+DONDE ::= DONDE:token TK_Y DONDE:token2
+			{: RESULT = token + " AND " + token2 + " "; :} |
+		
+		  DONDE:token TK_O DONDE:token2
+		  	{: RESULT = token + " OR " + token2 + " "; :}  |
+			
+		  COLUMNA:token OPERADOR:token2 TK_CADENA:token3
+		  	{: RESULT = token + " " + token2 + " '" + token3 + "'"; :} |
+		  	
+		  COLUMNA:token OPERADOR:token2 TK_ENTERO:token3
+		  	{: RESULT = token + " " + token2 + " " + token3; :} |
+		  
+		  COLUMNA:token OPERADOR:token2 TK_REAL:token3
+		  	{: RESULT = token + " " + token2 + " " + token3; :}
+;
+
+
+// definición de lista de valores plana
+VALOR_CON_COMA ::= VALOR_CAMPO:token TK_COMA  {: RESULT = token + " ,"; :} |
+					VALOR_CAMPO:token	{: RESULT = token; :} 
+
+;
+
+// definicion de campos=value ( setear valores a update )
+CAMPO_CON_VALOR ::= COLUMNA:token TK_IGUAL VALOR_CAMPO:token2
+						{: RESULT = token + " = "  + token2; :}  |
+					COLUMNA:token TK_IGUAL VALOR_CAMPO:token2 TK_COMA
+						{: RESULT = token + " = " + token2 + ", "; :}
+;
+
+// definición de un campo [NombreCampo TipoDatoCampo]
+DEFINICION_CAMPO ::= COLUMNA:token TIPO_DATO_CAMPO:token2
+						{: RESULT = token + " " + token2; :} |
+						
+					 COLUMNA:token TIPO_DATO_CAMPO:token2 TK_COMA
+					 	{: RESULT = token + " " + token2 + ","; :}
+;
+
+// Nombres de tablas permitidos
+NOMBRE_TABLA ::= 	TK_TABLA_ESTUDIANTE	{: RESULT = "Estudiante"; :}
+;
+
+// Operadores permitidos
+OPERADOR ::= TK_MAYOR	{: RESULT = ">"; :} |
+			 TK_MENOR	{: RESULT = "<"; :} |
+			 TK_MAYOR_IGUAL {: RESULT = ">="; :} |
+			 TK_MENOR_IGUAL {: RESULT = "<="; :} |
+			 TK_IGUAL	{: RESULT = "="; :} |
+			 TK_DIFERENTE	{: RESULT = "<>"; :}
+;
+
+// Definicion de Tipos de datos
+TIPO_DATO_CAMPO ::= TK_CADENA_DEFINICION  {: RESULT = "String"; :} |
+					 TK_ENTERO_DEFINICION  {: RESULT = "Integer"; :} |
+					 TK_REAL_DEFINICION    {: RESULT = "Float"; :}
+;
+
+// Valores para tipos de datos
+VALOR_CAMPO ::= TK_CADENA:token {: RESULT = token.toString(); :} |
+				TK_ENTERO:token {: RESULT = token.toString(); :} |
+				TK_REAL:token	{: RESULT = token.toString(); :}
+;
+
+// NOMBRES DE COLUMNAS PERMITIDOS
+COLUMNA ::= 	TK_NOMBRE 		{: RESULT = "nombre"; :} |
+				TK_CARNET 		{: RESULT = "carnet"; :} |
+				TK_PROMEDIO 	{: RESULT = "promedio"; :} |
+				TK_TELEFONO 	{: RESULT = "telefono"; :} |
+			 	TK_CARRERA 		{: RESULT = "carrera"; :}
+;
